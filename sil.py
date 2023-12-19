@@ -1,20 +1,26 @@
 from sklearn.metrics import silhouette_samples
+import pandas as pd
+import numpy as np
 
-def aggregated(X, clustering, strategy='macro'):
+def macro(X, clustering, per_cluster=False):
     """
-    Silhouette aggregated with different strategies
+    Macro-averaged silhouette, for per-cluster averaging, then returning their mean
+    :return: the silhouette aggregated score
     """
-    
-    assert strategy in {'macro', 'micro'}
-    
-    point_sils = pd.DataFrame({'sil': silhouette_samples(X, clustering),
-                               'label':clustering})
-    if strategy == 'micro':
-        return point_sils.mean()
+        
+    point_sils = pd.DataFrame({'sil': silhouette_samples(X, clustering), 'label':clustering})
 
-    elif strategy == 'macro':
-        return point_sils.groupby('label').sil.apply(np.mean)
-
+    representatives = point_sils.groupby('label').sil.apply(np.mean)
+    if per_cluster:
+        return representatives
     else:
-        print('Not implemented yet')
-        return None
+        return representatives.mean()
+    
+def micro(X, clustering):
+    """
+    Micro-averaged silhouette, as in sklearn
+    :return: the silhouette aggregated score
+    """
+        
+    point_sils = pd.DataFrame({'sil': silhouette_samples(X, clustering), 'label':clustering})
+    return point_sils.mean()
