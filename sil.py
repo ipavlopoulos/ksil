@@ -23,4 +23,4 @@ def micro(X, clustering):
     """
         
     point_sils = pd.DataFrame({'sil': silhouette_samples(X, clustering), 'label':clustering})
-    return point_sils.mean()
+    return point_sils.sil.mean()
