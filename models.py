@@ -18,18 +18,18 @@ def arg_percentile(data, percentile=75):
     
 
 
-def ksil(X, k=100, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random', percentile=0.5, find_k_steps=20):
+def ksil(X, k=100, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random', percentile=0.5, warmup=20):
     """K-Silhouette clustering of data by using the points with the maximum silhouette per cluster as centres
 
     :param points: the data
-    :param k: the number of clusters; if find_k_steps is positive, this should be set high
+    :param k: the starting number of clusters, if warmup is on, set it high, otherwise set it to the desired K
     :param ssize: the number of points to sample per cluster to evaluate silhouette, ignored by default
     :param max_iter: maximum number of iterations
     :param patience: number of epochs to wait with no improvement
     :param e: the value below which we assume convergence
     :param init: starting setting (kmeans/random)
     :param percentile: the percent of the data above which the silhouette should be to consider in the centroid computation 
-    :param find_k_step: the number of steps during which k is estimated; by default, 20
+    :param warmup: the number of steps during which k is estimated; by default, 20
     :return: the (best) centres, assigned labels, the history of the macro-score
     """
     
@@ -79,7 +79,7 @@ def ksil(X, k=100, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random',
             stop += 1
             
         # STEP: REASSIGNMENT (for the next iteration)        
-        if (find_k_steps>0) and (iteration<find_k_steps):
+        if iteration<warmup: # for negative warmpup this will never be activated 
             # first, use just the maximum silhouette to reduce K at an optimum value
             centres = data.iloc[sil_per_cluster.apply(np.argmax).values].points
             # centres = data.iloc[sil_per_cluster.apply(lambda x: arg_percentile(x, percentile=percentile)).values].points
@@ -89,8 +89,12 @@ def ksil(X, k=100, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random',
             for name, cluster in sil_per_cluster:
                 cluster_idx = cluster[cluster>cluster.quantile(percentile)].index
                 cluster_points = data.iloc[cluster_idx].points
-                w,h = cluster_points.shape[0], len(cluster_points.iloc[0])
-                centres.append(np.concatenate(cluster_points.to_numpy()).reshape(w,h).mean(0))
+                w = cluster_points.shape[0]
+                if w==0:
+                    centres.append(centres[-1])
+                else:
+                    h = len(cluster_points.iloc[0])
+                    centres.append(np.concatenate(cluster_points.to_numpy()).reshape(w,h).mean(0))
             centres = pd.Series(centres)
             
         # assign all the points to their clusters based on the max_sil points
