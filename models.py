@@ -1,17 +1,35 @@
+import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples
 
-def ksil(X, k, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random'):
+def arg_percentile(data, percentile=75):
+    """ Find the index with the respective percentile
+    
+    :param data: the data
+    :param percentile: the percentage of the data one is interested in
+    :param index: returns the index 
+    :return: the index at the specific percentile
+    """
+    percentile_value = np.percentile(data, percentile)
+    sorted_data = np.sort(data)
+    percentile_index = np.searchsorted(sorted_data, percentile_value)
+    return percentile_index
+    
+
+
+def ksil(X, k=100, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random', percentile=0.5, find_k_steps=20):
     """K-Silhouette clustering of data by using the points with the maximum silhouette per cluster as centres
 
     :param points: the data
-    :param k: the number of clusters
+    :param k: the number of clusters; if find_k_steps is positive, this should be set high
     :param ssize: the number of points to sample per cluster to evaluate silhouette, ignored by default
     :param max_iter: maximum number of iterations
     :param patience: number of epochs to wait with no improvement
     :param e: the value below which we assume convergence
     :param init: starting setting (kmeans/random)
+    :param percentile: the percent of the data above which the silhouette should be to consider in the centroid computation 
+    :param find_k_step: the number of steps during which k is estimated; by default, 20
     :return: the (best) centres, assigned labels, the history of the macro-score
     """
     
@@ -19,34 +37,32 @@ def ksil(X, k, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random'):
     
     # initializing
     size = len(X)
-    stop, best_score, best_centres, best_clustering = 0, 0, [], []    
-    results = {'mean':[], 'sem':[]}
+    stop, best_score, best_centres, best_clustering, kappas = 0, 0, [], [], []    
+    results = {'mean':[], 'sem':[], 'k':[]}
 
-    # starting point
+    # STEP: START (move inside the loop to estimate K)
     if init == 'kmeans':
         kmeans = KMeans(n_clusters=k, random_state=0, n_init="auto").fit(X)
         clustering = kmeans.labels_
+        centres = kmeans.cluster_centers_
     elif init == 'random':
+        # Pick K centres, randomly the first time 
         clustering = [np.random.randint(k) for i in range(size)]
+        centre_idx = np.random.choice(range(size), k, replace=False)
+        centres = X[centre_idx]
     else:
         print('Not implemented yet')
         return best_centres, best_clustering, pd.DataFrame(results)
 
-    # Pick K centres, randomly the first time 
-    centre_idx = np.random.choice(range(size), k, replace=False)
-    centres = X[centre_idx]
-
-    # 
-    for iteration in range(max_iter): 
-
-        # STEP: ASSESSMENT
+    for iteration in range(max_iter):         
         
+        # STEP: ASSESSMENT        
         # compute one silhouette per point
         data = pd.DataFrame({'clustering': clustering, 'points':X.tolist()})
         data['silhouette'] = silhouette_samples(X=X, labels=clustering)
         
         # group the points per cluster (sorted integers)
-        sil_per_cluster = data.groupby('clustering').silhouette
+        sil_per_cluster = data.groupby('clustering', group_keys=True).silhouette
         
         # compute the macro-averaged silhouette score
         results['mean'].append(sil_per_cluster.apply(np.mean).mean())
@@ -62,29 +78,36 @@ def ksil(X, k, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random'):
         else: 
             stop += 1
             
-        # STEP: REASSIGNMENT
-        
-        # use the points with the max sil as the new centres
-        centres = data.iloc[sil_per_cluster.apply(np.argmax).values].points
-                        
+        # STEP: REASSIGNMENT (for the next iteration)        
+        if (find_k_steps>0) and (iteration<find_k_steps):
+            # first, use just the maximum silhouette to reduce K at an optimum value
+            centres = data.iloc[sil_per_cluster.apply(np.argmax).values].points
+            # centres = data.iloc[sil_per_cluster.apply(lambda x: arg_percentile(x, percentile=percentile)).values].points
+        else:
+            # the centre of the points with the highest sil per clueter is the new cluster centre 
+            centres = []
+            for name, cluster in sil_per_cluster:
+                cluster_idx = cluster[cluster>cluster.quantile(percentile)].index
+                cluster_points = data.iloc[cluster_idx].points
+                w,h = cluster_points.shape[0], len(cluster_points.iloc[0])
+                centres.append(np.concatenate(cluster_points.to_numpy()).reshape(w,h).mean(0))
+            centres = pd.Series(centres)
+            
         # assign all the points to their clusters based on the max_sil points
-        new_assignments = [centres.apply(lambda x: np.linalg.norm(x-p)).argmin() for p in X]
-
-        # iff the solution makes sense update the clustering
-        if len(set(new_assignments)) > 1:                                                   
-            # label re-assignment
-            clustering = new_assignments                 
-                
+        clustering = [centres.apply(lambda x: np.linalg.norm(x-p)).argmin() for p in X]
+        k = len(set(clustering))
+        results['k'].append(k)
+                        
         # max patience reached
         if stop>patience:
-            print(f'Max patience is reached at K={len(set(clustering))}, using the solution with score {best_score:.2f}')
-            return best_centres, best_clustering, pd.DataFrame(results)
+            print(f'Max patience is reached at iteration: {iteration}, for K: {k}, using a solution scored as: {best_score:.3f}')
+            return best_centres, best_clustering, pd.DataFrame(results), k
 
         # converged
         if (np.mean(results['mean'][-patience:]) < e) & (iteration>100):
-            print(f'Converged at K={len(set(clustering))} at a solution with sil: {best_score:.2f}')
-            return best_centres, best_clustering, pd.DataFrame(results)
+            print(f'Converged at iteration: {iteration}, for K: {k}, using a solution scored as: {best_score:.3f}')
+            return best_centres, best_clustering, pd.DataFrame(results), k
                 
     # end of iterations
-    print(f'Maximum iterations are reached K={len(set(clustering))}, using the solution with score {best_score:.2f}')
-    return best_centres, best_clustering, pd.DataFrame(results)
+    print(f'Maximum iterations are reached at iteration: {iteration}, for K: {k}, using a solution scored as: {best_score:.3f}')
+    return best_centres, best_clustering, pd.DataFrame(results), k
