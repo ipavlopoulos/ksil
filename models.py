@@ -18,7 +18,7 @@ def arg_percentile(data, percentile=75):
     
 
 
-def ksil(X, k=100, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random', percentile=0.5, warmup=20):
+def ksil(X, k=100, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random', percentile=0.5, warmup=5, seed=2024):
     """K-Silhouette clustering of data by using the points with the maximum silhouette per cluster as centres
 
     :param points: the data
@@ -30,6 +30,7 @@ def ksil(X, k=100, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random',
     :param init: starting setting (kmeans/random)
     :param percentile: the percent of the data above which the silhouette should be to consider in the centroid computation 
     :param warmup: the number of steps during which k is estimated; by default, 20
+    :param seed: random state
     :return: the (best) centres, assigned labels, the history of the macro-score
     """
     
@@ -84,14 +85,17 @@ def ksil(X, k=100, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random',
             centres = data.iloc[sil_per_cluster.apply(np.argmax).values].points
             # centres = data.iloc[sil_per_cluster.apply(lambda x: arg_percentile(x, percentile=percentile)).values].points
         else:
-            # the centre of the points with the highest sil per clueter is the new cluster centre 
+            # the centre of the points with the highest sil per cluster is the new cluster centre 
             centres = []
             for name, cluster in sil_per_cluster:
                 cluster_idx = cluster[cluster>cluster.quantile(percentile)].index
                 cluster_points = data.iloc[cluster_idx].points
                 w = cluster_points.shape[0]
                 if w==0:
-                    centres.append(centres[-1])
+                    # a value far far away (effectively reducing K)
+                    centres.append(centres.sum(0)*1000)
+                    # the previous center, an arbitrary choice to enforce the desired K
+                    #centres.append(centres[-1])
                 else:
                     h = len(cluster_points.iloc[0])
                     centres.append(np.concatenate(cluster_points.to_numpy()).reshape(w,h).mean(0))
