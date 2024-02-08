@@ -12,7 +12,7 @@ NOTE: Clusters disappear when using the maximum silhouette as a center, leading 
 
 After cloning the repository, run the following in Python:
 ```
->>> from models import silmeans
+>>> from silmeans.models import clustering as silmeans 
 >>> centres, clustering, history = silmeans(points=X, k=500, patience=10)
 >>> history.plot(); # to visualise the history of the macro-averaged silhouette
 ```
