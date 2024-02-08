@@ -4,7 +4,8 @@
 * All points are assigned a random integer label $k \in \{1, ..., K\}$, forming a partition of the dataset.
 * The point with the highest silhouette (or the centroid of multiple ones) per cluster is used as the cluster center.
 * All the points in the dataset are assigned a label ($k$) according to their closest center.
-* NOTE: Clusters disappear when using the maximum silhouette as a center, leading to a number of clusters that decreases during training.
+
+NOTE: Clusters disappear when using the maximum silhouette as a center, leading to a number of clusters that decreases during training.
 
 ---
 
