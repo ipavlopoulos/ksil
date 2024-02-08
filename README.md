@@ -1,4 +1,4 @@
-# The ksil algorithm
+# The `ksil` algorithm
 
 * It labels the data based on the centroid of the points with the highest silhouette score in the cluster.
 * All points are assigned a random integer label $k \in \{1, ..., K\}$, forming a partition of the dataset.
