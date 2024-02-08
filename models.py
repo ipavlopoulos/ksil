@@ -18,7 +18,7 @@ def arg_percentile(data, percentile=75):
     
 
 
-def silmeans(X, k, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random', percentile=0.5, warmup=0, seed=2024):
+def clustering(X, k, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random', percentile=0.5, warmup=0, seed=2024):
     """Data clustering with silmeans by using the points with the highest silhouette per cluster as centres
 
     :param points: the data
