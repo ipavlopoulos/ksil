@@ -2,9 +2,9 @@
 
 * It labels the data based on the centroid of the points with the highest silhouette score in the cluster.
 * All points are assigned a random integer label $k \in \{1, ..., K\}$, forming a partition of the dataset.
-* The point with the highest silhouette score per cluster is extracted and used as a cluster representative.
-* All the points in the dataset, then, are assigned a label ($k$) according to their closest representative.
-* Note that the number of clusters ($K$) can decrease during training, because a cluster can disappeared.
+* The point with the highest silhouette (or the centroid of multiple ones) per cluster is used as the cluster center.
+* All the points in the dataset are assigned a label ($k$) according to their closest center.
+* NOTE: Clusters disappear when using the maximum silhouette as a center, leading to a number of clusters that decreases during training.
 
 ---
 
