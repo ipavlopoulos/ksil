@@ -5,6 +5,7 @@
 * The point with the highest silhouette (or the centroid of multiple ones) per cluster is used as the cluster center.
 * All the points in the dataset are assigned a label ($k$) according to their closest center.
 
+
 NOTE: Clusters disappear when using the maximum silhouette as a center, leading to a number of clusters that decreases during training.
 
 ---
