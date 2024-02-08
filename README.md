@@ -1,4 +1,4 @@
-# The silmeans algorithm
+# The ksil algorithm
 
 * It labels the data based on the centroid of the points with the highest silhouette score in the cluster.
 * All points are assigned a random integer label $k \in \{1, ..., K\}$, forming a partition of the dataset.
@@ -12,8 +12,8 @@ NOTE: Clusters disappear when using the maximum silhouette as a center, leading 
 
 After cloning the repository, run the following in Python:
 ```
->>> from silmeans.models import clustering as silmeans 
->>> centres, clustering, history = silmeans(points=X, k=500, patience=10)
+>>> from ksil.models import clustering as ksil 
+>>> centres, clustering, history = ksil(points=X, k=500, patience=10)
 >>> history.plot(); # to visualise the history of the macro-averaged silhouette
 ```
 
