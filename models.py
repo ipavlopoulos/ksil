@@ -18,7 +18,7 @@ def arg_percentile(data, percentile=75):
     
 
 
-def ksil(X, k=100, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random', percentile=0.5, warmup=5, seed=2024):
+def ksil(X, k, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random', percentile=0.5, warmup=0, seed=2024):
     """K-Silhouette clustering of data by using the points with the maximum silhouette per cluster as centres
 
     :param points: the data
@@ -93,7 +93,7 @@ def ksil(X, k=100, ssize=-1, max_iter=1000, patience=20, e=1e-06, init='random',
                 w = cluster_points.shape[0]
                 if w==0:
                     # a value far far away (effectively reducing K)
-                    centres.append(centres.sum(0)*1000)
+                    centres.append(np.sum(centres,axis=0)*1000)
                     # the previous center, an arbitrary choice to enforce the desired K
                     #centres.append(centres[-1])
                 else:
